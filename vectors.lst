@@ -33,6 +33,7 @@ ENDIF
   @mxfree(offscreen_pointer%)
   @mxfree(offscreen_work_buffer%)
   '
+  @rnd_exit
   @restore_colors
   @close_win
   @mxfree(palette%)
@@ -72,6 +73,7 @@ RETURN
   multi!=MULTITASK?
   '
   @declare
+  @rnd_init
   @declare_effect
   IF mint!=FALSE
     RESERVE 32000
@@ -292,12 +294,14 @@ RETURN
         univers_object&=1
       ELSE IF dummy$="BUSYBEE"
         univers_object&=2
+      ELSE IF dummy$="ENTROPY"
+        univers_object&=3
       ELSE
         univers_object&=0 ! default
       ENDIF
       '
       IF univers_object&=-1
-        univers_object&=PRED(MAX(1,MIN(RND*4,3)))
+        univers_object&=MAX(0,MIN(@rnd_get(4),3))
       ENDIF
       '
       univers_x_rot_speed&=VAL(@mem_find$("VECTORS_ROTATION_SPEED_X"))
@@ -605,7 +609,7 @@ RETURN
     add_point(12,12,0)
     add_point(13,12,0)
     '
-    add_point(1,13,0)
+    add_point(0,13,0)
     add_point(6,13,0)
     add_point(7,13,0)
     add_point(13,13,0)
@@ -718,6 +722,18 @@ RETURN
     add_point(5,14,0)
     add_point(11,14,0)
     add_point(13,14,0)
+    '
+  CASE 3 ! Entropy
+    '
+    IF univers_clipped!
+      screen_u=0.6
+    ELSE
+      screen_u=0.3
+    ENDIF
+    '
+    FOR i&=0 TO 120
+      add_point(@rnd_get(320),@rnd_get(320),@rnd_get(320))
+    NEXT i&
     '
   DEFAULT
     '
@@ -957,6 +973,24 @@ RETURN
     target_y&(point_nb&)=MUL(SUB(py&,7),20)
     target_z&(point_nb&)=SUB(pz&,50)
     '
+  CASE 3
+    '
+    SUB px&,160
+    SUB py&,160
+    SUB pz&,160
+    '
+    IF pz&=-256
+      pz&=-255
+    ENDIF
+    '
+    point_x&(point_nb&)=px&
+    point_y&(point_nb&)=py&
+    point_z&(point_nb&)=pz&
+    '
+    target_x&(point_nb&)=px&
+    target_y&(point_nb&)=py&
+    target_z&(point_nb&)=pz&
+    '
   DEFAULT
     '
     point_x&(point_nb&)=px&
@@ -972,6 +1006,46 @@ RETURN
   point_nb&=MIN(SUCC(point_nb&),point_nb_max&)
   '
 RETURN
+'
+> PROCEDURE rnd_init
+  LOCAL rnd_ptr%,rnd_end%
+  '
+  @mxfree(rnd_mem%)
+  '
+  rnd_mem%=MAX(0,@mxalloc(256,3))
+  IF rnd_mem%>0
+    '
+    rnd_ptr%=rnd_mem%
+    rnd_end%=ADD(rnd_mem%,256)
+    WHILE rnd_ptr%<rnd_end%
+      BYTE{rnd_ptr%}=MAX(0,MIN(RAND(256) AND &HFF,255))
+      INC rnd_ptr%
+    WEND
+    '
+    rnd_deb|=0
+  ENDIF
+RETURN
+> PROCEDURE rnd_exit
+  @mxfree(rnd_mem%)
+RETURN
+> FUNCTION rnd_get(rnd_max&)
+  $F%
+  LOCAL rnd_val|
+  '
+  IF rnd_mem%>0
+    INC rnd_deb|
+    IF rnd_deb|>255
+      rnd_deb|=0
+    ENDIF
+    rnd_val|=BYTE{ADD(rnd_mem%,rnd_deb|)}
+    rnd_val|=BYTE{ADD(rnd_mem%,rnd_val|)}
+    rnd_val|=BYTE{ADD(rnd_mem%,rnd_val|)}
+  ELSE
+    rnd_val|=MAX(0,MIN(RAND(256) AND &HFF,255))
+  ENDIF
+  '
+  RETURN SHR(MUL(rnd_max&,rnd_val|),8)
+ENDFUNC
 '
 > PROCEDURE restore_colors
   LOCAL tmp_c&,tmp_d&,col_r&,col_g&,col_b&
@@ -1000,7 +1074,7 @@ RETURN
   ENDIF
 RETURN
 > PROCEDURE set_colors
-  LOCAL tmp_l&,tmp_n&
+  LOCAL tmp_l&,tmp_m&,tmp_n&
   '
   IF bitplane_number&>4
     SELECT univers_object&
@@ -1013,6 +1087,11 @@ RETURN
       FOR tmp_n&=1 TO 63
         tmp_l&=MUL(tmp_n&,15)
         ~VS_COLOR(ADD(15,tmp_n&),tmp_l&,MIN(ADD(tmp_l&,40),1000),tmp_l&)
+      NEXT tmp_n&
+    CASE 3
+      FOR tmp_n&=1 TO 63
+        tmp_l&=MUL(tmp_n&,15)
+        ~VS_COLOR(ADD(15,tmp_n&),tmp_l&,tmp_l&,tmp_l&)
       NEXT tmp_n&
     DEFAULT
       FOR tmp_n&=1 TO 63
@@ -1031,6 +1110,11 @@ RETURN
       FOR tmp_n&=1 TO 14
         tmp_l&=MUL(tmp_n&,60)
         ~VS_COLOR(SUCC(tmp_n&),tmp_l&,MIN(ADD(tmp_l&,40),1000),tmp_l&)
+      NEXT tmp_n&
+    CASE 2
+      FOR tmp_n&=1 TO 14
+        tmp_l&=MUL(tmp_n&,60)
+        ~VS_COLOR(SUCC(tmp_n&),tmp_l&,tmp_l&,tmp_l&)
       NEXT tmp_n&
     DEFAULT
       FOR tmp_n&=1 TO 14
