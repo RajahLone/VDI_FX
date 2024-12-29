@@ -478,6 +478,7 @@ RETURN
         INT{ADD(mfdb_adr%,18)}=0
         '
         BMOVE ADD(file_adr%,20),LONG{mfdb_adr%},dummy_size%
+        good!=TRUE
         '
       ELSE
         '
@@ -635,7 +636,6 @@ RETURN
           SUB file_adr%,20
           good!=TRUE
         ENDSELECT
-        @mxfree(file_adr%)
       ENDIF
     ENDIF
   ENDIF
