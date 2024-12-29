@@ -580,6 +580,7 @@ RETURN
   IF LEFT$(pimg_name$)="@" ! duplicate sprite or mask, and keep same raster data (= alias)
     '
     BMOVE img_mfdb%(VAL(MID$(pimg_name$,2))),img_mfdb%(pimg_id&),20
+    good!=TRUE
     '
   ELSE
     '
@@ -606,6 +607,7 @@ RETURN
           INT{ADD(mfdb_adr%,18)}=0
           '
           BMOVE ADD(file_adr%,20),LONG{mfdb_adr%},dummy_size%
+          good!=TRUE
           '
         ELSE
           '
@@ -763,7 +765,6 @@ RETURN
             SUB file_adr%,20
             good!=TRUE
           ENDSELECT
-          @mxfree(file_adr%)
         ENDIF
       ENDIF
     ENDIF
@@ -1109,6 +1110,14 @@ RETURN
         ENDIF
       ENDIF
       aarbron_d&=aarbron_t&
+    ENDIF
+  ELSE
+    IF general_u&=-1
+      general_u&=0
+      general_d&=-1
+    ELSE IF general_u&=1
+      general_u&=0
+      general_d&=1
     ENDIF
   ENDIF
   '
